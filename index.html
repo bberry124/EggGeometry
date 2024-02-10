@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="title" content="reGoosinals egg0">
+    <meta name="description" content="Recursive Goose Ordinals 🦢 A vibrant mid effort 3D recursive ordinals project using geese">
+    <meta name="keywords" content="https://twitter.com/reGoosinals">
+    <meta name="author" content="https://twitter.com/benschiller_xyz" />
+    <title>reGoosinals egg0</title>
+    <style>
+        body {
+            background-color: black;
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.124.0/build/three.module.js';
+        import CameraControls from 'https://cdn.jsdelivr.net/npm/camera-controls@2.7.0/dist/camera-controls.module.min.js';
+        CameraControls.install({ THREE: THREE });
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        const renderer = new THREE.WebGLRenderer({ antialias: true }); // Enable maximum anti-aliasing
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // New geometry and material for the newEgg
+        const points = [];
+        for (let deg = 0; deg <= 180; deg += 6) {
+            const rad = (Math.PI * deg) / 180;
+            const point = new THREE.Vector2(
+                (0.72 + 0.08 * Math.cos(rad)) * Math.sin(rad),
+                -Math.cos(rad)
+            ); // the "egg equation"
+            points.push(point);
+        }
+        const newEggGeometry = new THREE.LatheGeometry(points, 32);
+
+        // Adjust UV mapping // benschiller_xyz
+        newEggGeometry.faceVertexUvs[0] = [];
+        for (let i = 0; i < newEggGeometry.faces.length; i++) {
+            const face = newEggGeometry.faces[i];
+            const v1 = newEggGeometry.vertices[face.a];
+            const v2 = newEggGeometry.vertices[face.b];
+            const v3 = newEggGeometry.vertices[face.c];
+            newEggGeometry.faceVertexUvs[0].push([
+                new THREE.Vector2((v1.x + 1) / 2, (v1.y + 1) / 1),
+                new THREE.Vector2((v2.x + 1) / 2, (v2.y + 1) / 2),
+                new THREE.Vector2((v3.x + 1) / 2, (v3.y + 1) / 2),
+            ]);
+        }
+        newEggGeometry.uvsNeedUpdate = true;
+
+        const newEggMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 1 },
+            },
+            vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+
+        void main() {
+          vUv = uv;
+          vNormal = normal;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+
+            fragmentShader: `
+        uniform float time;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+
+        void main() {
+          // Calculate light intensity based on the surface normal
+          float lightIntensity = dot(normalize(vNormal), vec3(0.0, 0.0, 0.0));
+
+          // Adjust light intensity to make shading more uniform
+          lightIntensity = mix(lightIntensity, 0.75, 1.5);
+
+          // Apply rainbow colors without relying on light intensity
+          vec3 color = vec3(
+            sin(vUv.y * 10.0 + time) * 1.0 + 2.5,
+            sin(vUv.y * 5.0 + time) * 0.5 + 0.5,
+            sin(vUv.xy * 5.0 + vUv.y * 5.0 + time) * 0.5 + 0.5
+          );
+
+          // Multiply rainbow colors by adjusted light intensity
+          gl_FragColor = vec4(color * lightIntensity, 1.0);
+        }
+      `,
+        });
+        const newEggMesh = new THREE.Mesh(newEggGeometry, newEggMaterial);
+        scene.add(newEggMesh);
+        // Camera position // reGoosinals egg0
+        camera.position.z = 3;
+
+        // Add camera controls
+        const clock = new THREE.Clock();
+        const controls = new CameraControls(camera, renderer.domElement);
+        
+        // Set min and max distance for camera controls
+        controls.minDistance = 1.1;
+        controls.maxDistance = 5;
+
+        function animate() {
+            const delta = clock.getDelta();
+            requestAnimationFrame(animate);
+            newEggMaterial.uniforms.time.value += 0.075; // Update time uniform for animation
+
+            // Update camera controls
+            controls.update(delta);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
